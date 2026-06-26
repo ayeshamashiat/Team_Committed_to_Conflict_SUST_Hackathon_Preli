@@ -1,0 +1,20 @@
+services:
+  queuestorm:
+    build: .
+    image: queuestorm-team
+    container_name: queuestorm-team
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      PORT: "8000"
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      MODEL_NAME: ${MODEL_NAME:-llama-3.3-70b-versatile}
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-30}
+      HEALTH_TIMEOUT_SECONDS: ${HEALTH_TIMEOUT_SECONDS:-60}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

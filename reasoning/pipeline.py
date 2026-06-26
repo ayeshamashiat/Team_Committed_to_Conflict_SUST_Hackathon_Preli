@@ -154,12 +154,18 @@ def analyze(ticket: dict[str, Any]) -> dict[str, Any]:
             + (["prompt_injection_detected"] if injection_attempted else []),
         }
 
-    # 3. Try Groq LLM
+    # 3. Try Groq LLM — any failure falls back to the deterministic pipeline.
     try:
         llm_result = call_groq(ticket)
     except GroqUnavailable as e:
         logger.info("LLM unavailable, using rule-based fallback: %s", e)
         result = _fallback_response(ticket, reason="api_fallback")
+        if injection_attempted:
+            result["reason_codes"] = list(result.get("reason_codes", [])) + ["prompt_injection_detected"]
+        return result
+    except Exception as e:
+        logger.exception("LLM call failed unexpectedly, using rule-based fallback: %s", e)
+        result = _fallback_response(ticket, reason="llm_error")
         if injection_attempted:
             result["reason_codes"] = list(result.get("reason_codes", [])) + ["prompt_injection_detected"]
         return result
