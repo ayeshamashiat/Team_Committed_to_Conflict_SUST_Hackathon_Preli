@@ -244,6 +244,10 @@ def call_groq(ticket: dict[str, Any], *, timeout_s: float = 25.0) -> dict[str, A
 
     Raises GroqUnavailable on configuration / network / parse failure.
     """
+    enabled = os.getenv("ENABLE_GROQ", "false").strip().lower() in {"1", "true", "yes", "on"}
+    if not enabled:
+        raise GroqUnavailable("Groq disabled; using rule-based pipeline")
+
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise GroqUnavailable("GROQ_API_KEY not set")
@@ -253,7 +257,11 @@ def call_groq(ticket: dict[str, Any], *, timeout_s: float = 25.0) -> dict[str, A
     except Exception as e:  # pragma: no cover
         raise GroqUnavailable(f"groq SDK import failed: {e}") from e
 
-    client = Groq(api_key=api_key, timeout=timeout_s)
+    try:
+        client = Groq(api_key=api_key, timeout=timeout_s)
+    except Exception as e:  # pragma: no cover
+        raise GroqUnavailable(f"Groq client init failed: {e}") from e
+
     messages = build_messages(ticket)
 
     try:

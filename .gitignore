@@ -1,0 +1,6 @@
+venv
+generate_tree_txt.py
+tree_snapshot.txt 
+queuestorm/__pycache__/
+reasoning/__pycache__/
+.env

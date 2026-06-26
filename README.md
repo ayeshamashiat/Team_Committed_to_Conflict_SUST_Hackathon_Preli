@@ -92,7 +92,7 @@ The reasoning layer is a **deterministic pipeline**:
 - is **reproducible** (same input → same output, every run),
 - fits the **<5GB image / no-GPU / no-multi-GB-download** constraints.
 
-Groq is wired in `requirements.txt` as an **optional** upgrade path. The pipeline currently does not call it, but a hybrid (rules for routing/evidence + LLM for reply phrasing) is straightforward to add.
+Groq is wired in `requirements.txt` as an **optional** upgrade path. The pipeline does not call it unless `ENABLE_GROQ=true` and `GROQ_API_KEY` are supplied; this keeps the default judge path deterministic and offline.
 
 ---
 
@@ -116,7 +116,7 @@ The safety layer runs **twice**: once inside the pipeline and once as a defense-
 | Model | Where it runs | Why chosen |
 | ----- | -------------- | ---------- |
 | _(none)_ | n/a | The default service uses a **rule-based reasoning pipeline**. No LLM, no embeddings, no large model weights are loaded. The pipeline satisfies the scoring categories (evidence reasoning, safety, schema correctness, performance) without external API cost or GPU. |
-| `llama-3.3-70b-versatile` (Groq, **optional / not active**) | External Groq API | Available as a fallback for richer reply phrasing if a Groq key is supplied via `GROQ_API_KEY`. Not used by default to keep the service free, deterministic, and offline-capable. |
+| `llama-3.3-70b-versatile` (Groq, **optional / disabled by default**) | External Groq API | Available for richer reply phrasing only when `ENABLE_GROQ=true` and `GROQ_API_KEY` are supplied. Disabled by default to keep the service free, deterministic, and offline-capable. |
 
 ---
 

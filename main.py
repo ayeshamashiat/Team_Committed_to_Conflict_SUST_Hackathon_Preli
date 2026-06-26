@@ -15,6 +15,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
 from queuestorm.config import settings
@@ -53,6 +54,11 @@ def _safe_error(message: str, status: int) -> JSONResponse:
 
 @app.exception_handler(ValidationError)
 async def _validation_handler(_: Request, exc: ValidationError) -> JSONResponse:
+    return _safe_error("malformed input: invalid schema", 400)
+
+
+@app.exception_handler(RequestValidationError)
+async def _request_validation_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
     return _safe_error("malformed input: invalid schema", 400)
 
 
