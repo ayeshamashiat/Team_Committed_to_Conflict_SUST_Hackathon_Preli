@@ -70,6 +70,21 @@ def _phishing_override() -> dict[str, Any]:
     }
 
 
+def _confidence(match_score: int, verdict: str, case_type: str, matched: bool) -> float:
+    """Estimate confidence from evidence strength while keeping review cases cautious."""
+    if case_type == "phishing_or_social_engineering":
+        return 0.95
+    if not matched or verdict == "insufficient_data":
+        return 0.35
+
+    # The matcher threshold is 3. Scores around 5 mean two strong signals
+    # such as amount + transfer wording; 8+ means amount/counterparty/type.
+    score_confidence = min(0.95, 0.58 + (min(match_score, 8) / 8) * 0.34)
+    if verdict == "inconsistent":
+        score_confidence -= 0.08
+    return round(max(0.1, min(score_confidence, 0.95)), 2)
+
+
 # ----------------------------- Fallback ----------------------------- #
 
 def _fallback_response(ticket: dict[str, Any], reason: str) -> dict[str, Any]:
@@ -102,7 +117,7 @@ def _fallback_response(ticket: dict[str, Any], reason: str) -> dict[str, Any]:
         "recommended_next_action": sanitize_next_action(base["recommended_next_action"]),
         "customer_reply": sanitize_customer_reply(base["customer_reply"]),
         "human_review_required": True,
-        "confidence": 0.5,
+        "confidence": _confidence(match.score, verdict, case_type, matched_txn is not None),
         "reason_codes": case_reasons + match.reason_codes + [verdict_reason, reason],
     }
 

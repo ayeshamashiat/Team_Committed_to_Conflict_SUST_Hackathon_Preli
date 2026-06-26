@@ -4,12 +4,14 @@ Scoring:
 - amount match: +3
 - counterparty (phone or substring) match: +3
 - type match (transfer/payment/etc.): +2
+- time hint match: +2
 - status match: +1
 Threshold: 3 to consider a match.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 from .entities import ExtractedEntities, extract
 from .text import normalize
@@ -45,6 +47,33 @@ def _type_in_text(txn_type: str, text: str) -> bool:
     }
     for kw in synonyms.get(txn_type, []):
         if kw in text:
+            return True
+    return False
+
+
+def _time_in_text(timestamp: str, entities: ExtractedEntities) -> bool:
+    if not timestamp or not entities.time_hints:
+        return False
+    m = re.search(r"T(\d{2}):(\d{2})", timestamp)
+    if not m:
+        return False
+    hour = int(m.group(1))
+
+    for hint in entities.time_hints:
+        hm = re.match(r"(\d{1,2})(am|pm)", hint)
+        if hm:
+            hinted_hour = int(hm.group(1)) % 12
+            if hm.group(2) == "pm":
+                hinted_hour += 12
+            if abs(hour - hinted_hour) <= 1:
+                return True
+        elif hint in {"afternoon", "দুপুর"} and 12 <= hour <= 17:
+            return True
+        elif hint in {"morning", "সকাল"} and 5 <= hour <= 11:
+            return True
+        elif hint in {"evening", "সন্ধ্যা"} and 17 <= hour <= 20:
+            return True
+        elif hint in {"night", "রাত"} and (hour >= 20 or hour <= 4):
             return True
     return False
 
@@ -95,6 +124,12 @@ def match_transaction(complaint: str, history: list[dict]) -> MatchResult:
         if _type_in_text(ttype, text):
             score += 2
             reasons.append("type_match")
+
+        # time hint
+        timestamp = str(txn.get("timestamp", ""))
+        if _time_in_text(timestamp, entities):
+            score += 2
+            reasons.append("time_match")
 
         # status
         status = str(txn.get("status", ""))

@@ -62,6 +62,6 @@ def extract(text: str) -> ExtractedEntities:
 
     for pat in _TIME_PATTERNS:
         for m in pat.finditer(text):
-            out.time_hints.append(m.group(1).lower())
+            out.time_hints.append(m.group(0).lower().replace(" ", ""))
 
     return out
